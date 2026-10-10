@@ -124,8 +124,8 @@ All APIs are simple Next.js Route Handlers returning JSON.
 - [x] `GET /api/auth/me`
 - [x] `POST /api/auth/logout`
 - [x] `GET /api/events` (with combined filters & pagination)
-- [ ] `GET /api/events/[id]` (Single event detail)
-- [ ] `POST /api/admin/events` & `PATCH /api/admin/events/[id]/status` (Admin management)
-- [ ] `GET & PUT /api/favourites` + `GET /api/feed` (User feed)
-- [ ] `GET, PUT & DELETE /api/reminders` (Reminder toggles)
-- [ ] `GET & PUT /api/events/[id]/card-design` (Card designer)
+- [x] `GET /api/events/[id]` (Single event detail)
+- [x] `GET & POST /api/admin/events` & `PATCH /api/admin/events/[id]/status` (Admin management)
+- [x] `GET & PUT /api/favourites` + `GET /api/feed` (User feed)
+- [x] `GET, PUT & DELETE /api/reminders` (Reminder toggles)
+- [x] `GET & PUT /api/events/[id]/card-design` (Card designer)
