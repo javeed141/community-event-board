@@ -9,31 +9,31 @@ export async function GET(
 ) {
   try {
     const auth = getAuthUser(request);
-    // If visitor is not logged in, return default design
+    // If not logged in, there is no saved design
     if (!auth) {
-      return NextResponse.json({
-        theme: 'default',
-        stickers: [],
-      });
+      return NextResponse.json({ design: null });
     }
 
     const { id: eventId } = await params;
 
-    const design = await CardDesign.findOne({
+    const savedDesign = await CardDesign.findOne({
       user: auth.userId,
       event: eventId,
     });
 
-    if (!design) {
+    // If no design saved yet in DB, return null so UI shows "Create your design" empty state
+    if (!savedDesign) {
       return NextResponse.json({
-        theme: 'default',
-        stickers: [],
+        design: null,
+        message: 'No saved design found for this event',
       });
     }
 
     return NextResponse.json({
-      theme: design.theme,
-      stickers: design.stickers,
+      design: {
+        theme: savedDesign.theme,
+        stickers: savedDesign.stickers,
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to fetch card design';
@@ -59,10 +59,10 @@ export async function PUT(
     const body = await request.json();
     const { theme, stickers } = body;
 
-    // Validate stickers (max 3 allowed)
+    // Enforce max 3 stickers constraint from specification
     const validStickers = Array.isArray(stickers) ? stickers.slice(0, 3) : [];
 
-    const design = await CardDesign.findOneAndUpdate(
+    const savedDesign = await CardDesign.findOneAndUpdate(
       { user: auth.userId, event: eventId },
       {
         user: auth.userId,
@@ -75,8 +75,10 @@ export async function PUT(
 
     return NextResponse.json({
       message: 'Card design saved successfully',
-      theme: design.theme,
-      stickers: design.stickers,
+      design: {
+        theme: savedDesign.theme,
+        stickers: savedDesign.stickers,
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to save card design';

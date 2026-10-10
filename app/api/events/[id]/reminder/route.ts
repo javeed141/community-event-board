@@ -15,12 +15,11 @@ export async function PUT(
 
     const { id: eventId } = await params;
 
-    // Idempotent upsert: create if doesn't exist
-    await Reminder.findOneAndUpdate(
-      { user: auth.userId, event: eventId },
-      { user: auth.userId, event: eventId },
-      { upsert: true, new: true }
-    );
+    // Save reminder if not already saved
+    const exists = await Reminder.findOne({ user: auth.userId, event: eventId });
+    if (!exists) {
+      await Reminder.create({ user: auth.userId, event: eventId });
+    }
 
     return NextResponse.json({
       message: 'Reminder saved successfully',
