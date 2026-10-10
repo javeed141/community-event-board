@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import '@/lib/db';
 
 const ReminderSchema = new Schema(
   {

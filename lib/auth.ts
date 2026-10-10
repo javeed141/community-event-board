@@ -26,3 +26,29 @@ export async function verifyPassword(plainPassword: string, hashedPassword: stri
 export async function hashPassword(plainPassword: string) {
   return await bcrypt.hash(plainPassword, 10);
 }
+
+// Get authenticated user payload from request cookie or header
+export function getAuthUser(request: Request): { userId: string; email: string; role: string } | null {
+  // Check cookie header
+  const cookieHeader = request.headers.get('cookie') || '';
+  let token = null;
+
+  const match = cookieHeader.match(/auth_token=([^;]+)/);
+  if (match) {
+    token = match[1];
+  }
+
+  // Check Authorization Bearer header
+  if (!token) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    }
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  return verifyToken(token) as { userId: string; email: string; role: string } | null;
+}
