@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
 import Event from '@/lib/models/Event';
-import { getAuthUser } from '@/lib/auth';
+import { verifyAdmin } from '@/lib/auth';
 
 const ALLOWED_CATEGORIES = ['Music', 'Workshop', 'Food', 'Sports', 'Kids'];
 
 // 1. GET: List all events for the admin dashboard (including past & inactive)
 export async function GET(request: Request) {
   try {
-    const auth = getAuthUser(request);
-    // Server-side admin protection
-    if (!auth || auth.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Dual protection: JWT admin role + custom 'x-admin-key' header
+    const admin = verifyAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Admin access only' },
+        { status: 403 }
+      );
     }
 
     // Return all events, newest first
@@ -26,10 +29,13 @@ export async function GET(request: Request) {
 // 2. POST: Create a new event
 export async function POST(request: Request) {
   try {
-    const auth = getAuthUser(request);
-    // Server-side admin protection
-    if (!auth || auth.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Dual protection: JWT admin role + custom 'x-admin-key' header
+    const admin = verifyAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Admin access only' },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -70,7 +76,7 @@ export async function POST(request: Request) {
       price: numPrice,
       imageUrl: imageUrl.trim(),
       isActive: typeof isActive === 'boolean' ? isActive : true,
-      createdBy: auth.userId,
+      createdBy: admin.userId,
     });
 
     return NextResponse.json(

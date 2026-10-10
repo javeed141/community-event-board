@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
 import Event from '@/lib/models/Event';
-import { getAuthUser } from '@/lib/auth';
+import { verifyAdmin } from '@/lib/auth';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = getAuthUser(request);
-    // Server-side admin authorization
-    if (!auth || auth.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    // Dual protection: JWT admin role + custom 'x-admin-key' header
+    const admin = verifyAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Admin access only' },
+        { status: 403 }
+      );
     }
 
     const { id: eventId } = await params;
