@@ -17,12 +17,13 @@ export async function PUT(
     await connectDb();
     const { id: eventId } = await params;
 
-    // Save reminder if not already saved
-    const exists = await Reminder.findOne({ user: auth.userId, event: eventId });
-    if (!exists) {
-      await Reminder.create({ user: auth.userId, event: eventId });
-    }
-
+    // Atomically upsert reminder to prevent race conditions (E11000 duplicate key error)
+    await Reminder.updateOne(
+      { user: auth.userId, event: eventId },
+      { $setOnInsert: { user: auth.userId, event: eventId } },
+      { upsert: true }
+    );
+// Hey, in MongoDB, { upsert: true } means: update the document if it exists; otherwise, insert a new document.
     return NextResponse.json({
       message: 'Reminder saved successfully',
       eventId,

@@ -6,7 +6,10 @@ export async function POST() {
   });
 
   // Remove auth token cookie
-  response.cookies.delete('auth_token');
+  response.cookies.delete({
+    name: 'auth_token',
+    path: '/',
+  });
 
   return response;
 }
