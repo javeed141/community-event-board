@@ -1,47 +1,162 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { 
-  Heart, 
-  Bell, 
-  Palette, 
-  Calendar, 
-  MapPin, 
-  Sparkles, 
-  SlidersHorizontal, 
-  ArrowLeft,
-  CheckCircle2
-} from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { Heart, ArrowLeft, LogOut, User, Tag, Inbox } from 'lucide-react';
+import EventCard, { EventItem } from '@/components/EventCard';
+import FavoritesPicker from '@/components/FavoritesPicker';
+import { toast } from "@/components/ui/toast"
 
-const ALL_CATEGORIES = ['Music', 'Workshop', 'Food', 'Sports', 'Kids'];
+type UserProfile = {
+  id: string;
+  email: string;
+  role: string;
+  favoriteCategories: string[];
+};
 
-export default function UserPersonalizedPage() {
-  // State for user's selected favourite categories
-  const [favoriteCategories, setFavoriteCategories] = useState<string[]>(['Music', 'Food']);
-  const [reminders, setReminders] = useState<string[]>(['1']); // event IDs with reminder set
+export default function UserDashboardPage() {
+  const router = useRouter();
 
-  const toggleCategory = (cat: string) => {
-    if (favoriteCategories.includes(cat)) {
-      setFavoriteCategories(favoriteCategories.filter((c) => c !== cat));
-    } else {
-      setFavoriteCategories([...favoriteCategories, cat]);
+  // ── Auth State ─────────────────────────────────────────────────────────────
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  // ── Feed State ─────────────────────────────────────────────────────────────
+  const [feedEvents, setFeedEvents] = useState<EventItem[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedMessage, setFeedMessage] = useState('');
+  const [userCategories, setUserCategories] = useState<string[]>([]);
+
+  // ── Reminders State ────────────────────────────────────────────────────────
+  const [reminderEventIds, setReminderEventIds] = useState<string[]>([]);
+  const [reminderLoading, setReminderLoading] = useState<Set<string>>(new Set());
+
+  // Check auth & initial user on mount
+  useEffect(() => {
+    
+    async function initUser() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.status === 401) {
+          router.replace('/login');
+          return;
+        }
+        const data = await res.json();
+        setCurrentUser(data.user);
+        setUserCategories(data.user?.favoriteCategories || []);
+      } catch {
+        router.replace('/login');
+      } finally {
+        setAuthLoading(false);
+      }
     }
-  };
+    initUser();
+  }, [router]);
 
-  const toggleReminder = (eventId: string) => {
-    if (reminders.includes(eventId)) {
-      setReminders(reminders.filter((id) => id !== eventId));
-    } else {
-      setReminders([...reminders, eventId]);
+  // Fetch feed events
+  async function fetchFeed() {
+    setFeedLoading(true);
+    try {
+      const res = await fetch('/api/feed');
+      if (!res.ok) return;
+      const data = await res.json();
+      setFeedEvents(data.events || []);
+      setFeedMessage(data.message || '');
+      if (data.favoriteCategories) {
+        setUserCategories(data.favoriteCategories);
+      }
+    } catch {
+      // Silently catch
+    } finally {
+      setFeedLoading(false);
     }
-  };
+  }
+
+  // Load feed and reminders once auth completes
+  useEffect(() => {
+    if (!currentUser) return;
+
+    fetchFeed();
+
+    async function fetchReminders() {
+      try {
+        const res = await fetch('/api/reminders');
+        if (!res.ok) return;
+        const data = await res.json();
+        setReminderEventIds(data.reminderEventIds || []);
+      } catch {
+        // Silently catch
+      }
+    }
+
+    fetchReminders();
+  }, [currentUser]);
+
+  // Logout handler
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      router.replace('/login');
+    }
+  }
+
+  // Toggle Reminder handler
+  async function toggleReminder(eventId: string) {
+    const hasReminder = reminderEventIds.includes(eventId);
+
+    setReminderLoading((prev) => new Set(prev).add(eventId));
+
+    try {
+      const method = hasReminder ? 'DELETE' : 'PUT';
+      const res = await fetch(`/api/events/${eventId}/reminder`, { method });
+
+      if (res.ok) {
+        if (hasReminder) {
+          setReminderEventIds((prev) => prev.filter((id) => id !== eventId));
+        } else {
+          setReminderEventIds((prev) => [...prev, eventId]);
+        }
+      } else {
+        toast.add({
+          title: 'Reminder failed',
+          description: 'Could not update reminder. Please try again.',
+          type: 'error',
+        });
+      }
+    } catch {
+      toast.add({
+        title: 'Network error',
+        description: 'Could not reach the server. Please try again.',
+        type: 'error',
+      });
+    } finally {
+      setReminderLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+    }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!currentUser) return null;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
-      {/* 1. TOP HEADER */}
+      {/* ── HEADER ──────────────────────────────────────────────────────── */}
       <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -49,135 +164,123 @@ export default function UserPersonalizedPage() {
               <Heart className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-bold text-base text-white leading-tight">My Feed & Dashboard</h1>
-              <p className="text-xs text-zinc-400">Personalized community events for you</p>
+              <h1 className="font-bold text-base text-white leading-tight">My Dashboard</h1>
+              <p className="text-xs text-zinc-400">Personalized community events</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <Link href="/">
+            <div className="hidden sm:flex items-center gap-2 bg-zinc-800/60 border border-zinc-700/60 rounded-lg px-3 py-1.5">
+              <User className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="text-xs text-zinc-300 font-medium">{currentUser.email}</span>
+            </div>
+
+            <Link href="/user/events">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs">
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Explore All Events</span>
+                <span className="hidden sm:inline">All Events</span>
               </Button>
             </Link>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="gap-1.5 text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10"
+            >
+              {loggingOut ? <Spinner /> : <LogOut className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
           </div>
         </div>
       </header>
 
+      {/* ── MAIN CONTENT ────────────────────────────────────────────────── */}
       <main className="max-w-7xl mx-auto px-4 py-8 w-full flex-1 space-y-8">
-        {/* 2. FAVOURITE CATEGORIES SELECTOR */}
-        <Card className="border-zinc-800 bg-zinc-900/80">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-rose-400">
-              <Sparkles className="w-4 h-4" />
-              <CardTitle className="text-base font-semibold">Favourite Event Categories</CardTitle>
-            </div>
-            <CardDescription className="text-xs">
-              Select your favourite categories below. Your feed will automatically adapt to show upcoming events matching these categories.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <div className="flex flex-wrap items-center gap-2.5">
-              {ALL_CATEGORIES.map((category) => {
-                const isSelected = favoriteCategories.includes(category);
-                return (
-                  <button
-                    key={category}
-                    onClick={() => toggleCategory(category)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer flex items-center gap-2 border ${
-                      isSelected
-                        ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-semibold shadow-sm'
-                        : 'bg-zinc-800/60 border-zinc-700/60 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                    }`}
-                  >
-                    <span>{category}</span>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-rose-400" />}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-zinc-500 mt-3">
-              {favoriteCategories.length > 0
-                ? `Showing events for: ${favoriteCategories.join(', ')}`
-                : 'No categories selected. Pick at least one to personalize your feed!'}
-            </p>
-          </CardContent>
-        </Card>
+        {/* 1. Category Preferences Component */}
+        <FavoritesPicker
+          initialCategories={currentUser.favoriteCategories}
+          onSaved={(newCategories) => {
+            setUserCategories(newCategories);
+            fetchFeed();
+          }}
+        />
 
-        {/* 3. MY FEED (MATCHING EVENTS) */}
+        {/* 2. My Feed Section */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-white">Your Tailored Feed</h2>
+              <h2 className="text-lg font-bold text-white">Your Feed</h2>
               <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
                 Upcoming & Active
               </span>
             </div>
-            <span className="text-xs text-zinc-400">Sorted nearest date first</span>
+            <span className="text-xs text-zinc-400">Nearest date first</span>
           </div>
 
-          {/* Events matching user's selected favorites */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2].map((item) => {
-              const hasReminder = reminders.includes(item.toString());
-              return (
-                <Card key={item} className="overflow-hidden border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 transition-all flex flex-col">
-                  <div className="h-44 bg-zinc-800/60 relative">
-                    <div className="absolute top-3 left-3 bg-zinc-950/80 backdrop-blur px-2.5 py-1 rounded text-xs font-medium text-rose-400 border border-zinc-800">
-                      {item === 1 ? 'Music' : 'Food'}
-                    </div>
-                    {/* Instant Remind Me Action */}
-                    <div className="absolute top-3 right-3">
-                      <button
-                        onClick={() => toggleReminder(item.toString())}
-                        title={hasReminder ? 'Remove reminder' : 'Set reminder'}
-                        className={`p-2 rounded-full backdrop-blur border transition-colors cursor-pointer ${
-                          hasReminder
-                            ? 'bg-emerald-500 text-white border-emerald-400'
-                            : 'bg-zinc-950/80 text-zinc-400 hover:text-emerald-400 border-zinc-800'
-                        }`}
-                      >
-                        <Bell className="w-4 h-4" />
-                      </button>
-                    </div>
+          {/* Loading Skeleton */}
+          {feedLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden animate-pulse"
+                >
+                  <div className="h-44 bg-zinc-800" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-3 bg-zinc-800 rounded w-1/2" />
+                    <div className="h-4 bg-zinc-800 rounded w-3/4" />
+                    <div className="h-3 bg-zinc-800 rounded w-full" />
+                    <div className="h-3 bg-zinc-800 rounded w-2/3" />
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-                  <CardHeader className="p-4 space-y-1">
-                    <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <span className="flex items-center gap-1 text-emerald-400">
-                        <Calendar className="w-3.5 h-3.5" /> Sat, 18 Oct, 6:30 PM
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5" /> Bangalore
-                      </span>
-                    </div>
-                    <CardTitle className="text-base text-white pt-1">
-                      {item === 1 ? 'Indie Rock Night Live' : 'Bangalore Food Truck Fiesta'}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs">
-                      Curated specifically because you selected {item === 1 ? 'Music' : 'Food'} as your favourite.
-                    </CardDescription>
-                  </CardHeader>
+          {/* Empty state: No categories selected */}
+          {!feedLoading && userCategories.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 border border-zinc-800/60 rounded-xl bg-zinc-900/30">
+              <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center">
+                <Tag className="w-6 h-6 text-zinc-500" />
+              </div>
+              <p className="text-zinc-300 font-medium">No categories selected</p>
+              <p className="text-zinc-500 text-sm max-w-xs">
+                Pick your favourite categories above and save to see personalised events here.
+              </p>
+            </div>
+          )}
 
-                  <CardContent className="p-4 pt-0 mt-auto flex items-center justify-between border-t border-zinc-800/60 pt-3">
-                    <div className="text-sm font-bold text-white">{item === 1 ? '₹499' : 'Free'}</div>
-                    <div className="flex items-center gap-2">
-                      <Link href={`/events/${item}`}>
-                        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-                          <Palette className="w-3.5 h-3.5" />
-                          <span>Design Card</span>
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          {/* Empty state: Categories saved but no upcoming matching events */}
+          {!feedLoading && userCategories.length > 0 && feedEvents.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 border border-zinc-800/60 rounded-xl bg-zinc-900/30">
+              <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center">
+                <Inbox className="w-6 h-6 text-zinc-500" />
+              </div>
+              <p className="text-zinc-300 font-medium">No upcoming events found</p>
+              <p className="text-zinc-500 text-sm max-w-xs">
+                {feedMessage || 'There are no active upcoming events matching your favourite categories right now. Check back soon!'}
+              </p>
+            </div>
+          )}
+
+          {/* Events Grid using modular EventCard component */}
+          {!feedLoading && feedEvents.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {feedEvents.map((event) => (
+                <EventCard
+                  key={event._id}
+                  event={event}
+                  hasReminder={reminderEventIds.includes(event._id)}
+                  isReminderLoading={reminderLoading.has(event._id)}
+                  onToggleReminder={toggleReminder}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>
   );
 }
-
