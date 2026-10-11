@@ -1,278 +1,69 @@
-'use client';
-
-import React, { useState, useEffect, useCallback } from 'react';
-import EventCard, { EventItem } from '@/components/EventCard';
-import { useAuth } from '@/context/AuthContext';
-
-const CATEGORIES = ['All', 'Music', 'Workshop', 'Food', 'Sports', 'Kids'];
-const CITIES = ['All', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Coimbatore', 'Pune'];
+import Image from "next/image";
 
 export default function Home() {
-  const { user } = useAuth();
-
-  // Filters state
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedCity, setSelectedCity] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Data state
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [reminderIds, setReminderIds] = useState<string[]>([]);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    limit: 6,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPrevPage: false,
-  });
-  const [loading, setLoading] = useState(true);
-
-  // Fetch reminders for logged in user
-  useEffect(() => {
-    let isMounted = true;
-    if (!user) {
-      return;
-    }
-
-    fetch('/api/reminders')
-      .then((res) => (res.ok ? res.json() : { reminderEventIds: [] }))
-      .then((data) => {
-        if (isMounted) {
-          setReminderIds(data.reminderEventIds || []);
-        }
-      })
-      .catch(() => {
-        if (isMounted) setReminderIds([]);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
-
-  // Fetch events based on active filters
-  const fetchEvents = useCallback(async (showLoading = false) => {
-    if (showLoading) setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search.trim()) params.set('search', search.trim());
-      if (selectedCategory !== 'All') params.set('category', selectedCategory);
-      if (selectedCity !== 'All') params.set('city', selectedCity);
-      params.set('page', String(currentPage));
-      params.set('limit', '6');
-
-      const res = await fetch(`/api/events?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data.events || []);
-        if (data.pagination) setPagination(data.pagination);
-      } else {
-        setEvents([]);
-      }
-    } catch {
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, selectedCategory, selectedCity, currentPage]);
-
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
-
-  // Reset page to 1 when changing search or filters
-  const handleCategoryChange = (cat: string) => {
-    setSelectedCategory(cat);
-    setCurrentPage(1);
-  };
-
-  const handleCityChange = (city: string) => {
-    setSelectedCity(city);
-    setCurrentPage(1);
-  };
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1);
-    fetchEvents();
-  };
-
-  const handleReminderChange = (eventId: string, isReminded: boolean) => {
-    setReminderIds((prev) =>
-      isReminded ? [...prev, eventId] : prev.filter((id) => id !== eventId)
-    );
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* Hero Header */}
-      <div className="text-center max-w-3xl mx-auto mb-10">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white">
-          Discover Local{' '}
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
-            Community Events
-          </span>
-        </h1>
-        <p className="mt-3 text-base text-zinc-400 leading-relaxed">
-          Explore upcoming live concerts, workshops, sports, and food carnivals in your city.
-          Save instant reminders and personalize custom event cards.
-        </p>
-
-        {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="mt-8 flex gap-2 max-w-xl mx-auto">
-          <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
-              🔍
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by event title or keyword..."
-              className="w-full pl-10 pr-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl shadow-md transition-colors cursor-pointer"
-          >
-            Search
-          </button>
-        </form>
-      </div>
-
-      {/* Filters Bar */}
-      <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-5 mb-10 backdrop-blur-sm space-y-4">
-        {/* Category Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mr-2">
-            Category:
-          </span>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => handleCategoryChange(cat)}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer ${
-                selectedCategory === cat
-                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm'
-                  : 'bg-zinc-950/80 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
-              }`}
+    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+        <Image
+          className="dark:invert h-5 w-[100px]"
+          src="/next.svg"
+          alt="Next.js logo"
+          width={100}
+          height={20}
+          priority
+        />
+        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
+          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
+            To get started, edit the{" "}
+            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
+              page.tsx
+            </code>{" "}
+            file.
+          </h1>
+          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
+            Looking for a starting point or more instructions? Head over to{" "}
+            <a
+              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+              className="font-medium text-zinc-950 dark:text-zinc-50"
             >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* City Filter & Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-zinc-800/60">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mr-2">
-              City:
-            </span>
-            <select
-              value={selectedCity}
-              onChange={(e) => handleCityChange(e.target.value)}
-              className="bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              Templates
+            </a>{" "}
+            or the{" "}
+            <a
+              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+              className="font-medium text-zinc-950 dark:text-zinc-50"
             >
-              {CITIES.map((city) => (
-                <option key={city} value={city}>
-                  {city === 'All' ? 'All Cities' : `📍 ${city}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {(selectedCategory !== 'All' || selectedCity !== 'All' || search) && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCategory('All');
-                setSelectedCity('All');
-                setSearch('');
-                setCurrentPage(1);
-              }}
-              className="text-xs text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-            >
-              ✕ Clear all filters
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Events Listing */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="h-80 bg-zinc-900 border border-zinc-800 rounded-2xl animate-pulse"
-            />
-          ))}
-        </div>
-      ) : events.length === 0 ? (
-        <div className="text-center py-20 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-8">
-          <span className="text-4xl">🎪</span>
-          <h3 className="mt-4 text-lg font-bold text-white">No upcoming events found</h3>
-          <p className="mt-1 text-sm text-zinc-400 max-w-md mx-auto">
-            We couldn&apos;t find any events matching your selected search or filters. Try adjusting your keywords or clearing filters.
+              Learning
+            </a>{" "}
+            center.
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory('All');
-              setSelectedCity('All');
-              setSearch('');
-              setCurrentPage(1);
-            }}
-            className="mt-6 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg border border-zinc-700 transition-colors"
-          >
-            Reset Filters
-          </button>
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <EventCard
-                key={event._id}
-                event={event}
-                isReminded={reminderIds.includes(event._id)}
-                onReminderChange={handleReminderChange}
-              />
-            ))}
-          </div>
-
-          {/* Pagination Controls */}
-          {pagination.totalPages > 1 && (
-            <div className="mt-12 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                disabled={!pagination.hasPrevPage}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="px-4 py-2 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 text-xs font-semibold rounded-xl transition-colors"
-              >
-                ← Previous
-              </button>
-
-              <span className="text-xs text-zinc-400 font-medium px-2">
-                Page {pagination.page} of {pagination.totalPages} ({pagination.total} events)
-              </span>
-
-              <button
-                type="button"
-                disabled={!pagination.hasNextPage}
-                onClick={() => setCurrentPage((p) => p + 1)}
-                className="px-4 py-2 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 text-xs font-semibold rounded-xl transition-colors"
-              >
-                Next →
-              </button>
-            </div>
-          )}
-        </>
-      )}
+        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+          <a
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
+            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              className="dark:invert h-[14px] w-4"
+              src="/vercel.svg"
+              alt="Vercel logomark"
+              width={16}
+              height={14}
+            />
+            Deploy Now
+          </a>
+          <a
+            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
+            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Documentation
+          </a>
+        </div>
+      </main>
     </div>
   );
 }
