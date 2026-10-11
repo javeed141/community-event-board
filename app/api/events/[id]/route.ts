@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import Event from '@/lib/models/Event';
 
 export async function GET(
@@ -6,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await connectDb();
     const { id } = await params;
 
     const event = await Event.findById(id);

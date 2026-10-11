@@ -1,5 +1,4 @@
 import mongoose, { Schema } from 'mongoose';
-import '@/lib/db';
 
 const UserSchema = new Schema(
   {

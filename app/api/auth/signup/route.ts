@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import User from '@/lib/models/User';
 import { hashPassword, signToken } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
+    await connectDb();
     const body = await request.json();
     const { email, password } = body;
 

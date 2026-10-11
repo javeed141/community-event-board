@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import CardDesign from '@/lib/models/CardDesign';
 import { getAuthUser } from '@/lib/auth';
 
@@ -14,6 +15,7 @@ export async function GET(
       return NextResponse.json({ design: null });
     }
 
+    await connectDb();
     const { id: eventId } = await params;
 
     const savedDesign = await CardDesign.findOne({
@@ -55,6 +57,7 @@ export async function PUT(
       );
     }
 
+    await connectDb();
     const { id: eventId } = await params;
     const body = await request.json();
     const { theme, stickers } = body;

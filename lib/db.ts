@@ -1,23 +1,52 @@
 import mongoose from 'mongoose';
 
-const connectDb = async () => {
-  try {
-    // If already connected or connecting, do nothing
-    if (mongoose.connection.readyState >= 1) {
-      return;
-    }
+const MONGODB_URI = process.env.MONGODB_URI;
 
-    await mongoose.connect(process.env.MONGODB_URI || '', {
-      dbName: 'community_events',
-    });
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
 
-    console.log('MongoDB connected successfully');
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
+declare global {
+  // eslint-disable-next-line no-var
+  var mongoose: MongooseCache | undefined;
+}
+
+let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
+
+if (!global.mongoose) {
+  global.mongoose = cached;
+}
+
+export async function connectDb(): Promise<typeof mongoose> {
+  if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable inside .env');
   }
-};
 
-// Call it directly right here in the file
-connectDb();
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts: mongoose.ConnectOptions = {
+      dbName: 'community_events',
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((m) => {
+      console.log('MongoDB connected successfully');
+      return m;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (error) {
+    cached.promise = null; // Reset cached promise so future requests can retry
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
+
+  return cached.conn;
+}
 
 export default connectDb;

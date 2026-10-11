@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import User from '@/lib/models/User';
 import { getAuthUser } from '@/lib/auth';
 
@@ -10,6 +11,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    await connectDb();
     const user = await User.findById(auth.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -43,6 +45,7 @@ export async function PUT(request: Request) {
     }
 
     // Update user document
+    await connectDb();
     const user = await User.findByIdAndUpdate(
       auth.userId,
       { favoriteCategories: categories },

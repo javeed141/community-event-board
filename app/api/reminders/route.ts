@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import Reminder from '@/lib/models/Reminder';
 import { getAuthUser } from '@/lib/auth';
 
@@ -10,6 +11,7 @@ export async function GET(request: Request) {
     }
 
     // Find all reminders for this user
+    await connectDb();
     const reminders = await Reminder.find({ user: auth.userId }).select('event');
     const reminderEventIds = reminders.map((r) => r.event.toString());
 

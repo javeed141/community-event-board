@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import Event from '@/lib/models/Event';
 import { verifyAdmin } from '@/lib/auth';
 
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
       );
     }
 
+    await connectDb();
     // Return all events, newest first
     const events = await Event.find().sort({ dateTime: 1 });
 
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
+    await connectDb();
     const body = await request.json();
     const { title, description, category, city, dateTime, price, imageUrl, isActive } = body;
 

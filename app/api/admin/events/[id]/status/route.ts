@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import Event from '@/lib/models/Event';
 import { verifyAdmin } from '@/lib/auth';
 
@@ -16,6 +17,7 @@ export async function PATCH(
       );
     }
 
+    await connectDb();
     const { id: eventId } = await params;
     const body = await request.json().catch(() => ({}));
     const { isActive } = body;

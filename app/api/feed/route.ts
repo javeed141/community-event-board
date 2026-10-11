@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import User from '@/lib/models/User';
 import Event from '@/lib/models/Event';
 import { getAuthUser } from '@/lib/auth';
@@ -10,6 +11,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    await connectDb();
     // 1. Fetch user to get their favorite categories
     const user = await User.findById(auth.userId);
     if (!user) {

@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import Event from '@/lib/models/Event';
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 export async function GET(request: Request) {
   try {
+    await connectDb();
     const { searchParams } = new URL(request.url);
 
     // 1. Extract query params from URL
@@ -23,16 +29,17 @@ export async function GET(request: Request) {
       query.category = category;
     }
 
-    // 4. City filter (case-insensitive)
+    // 4. City filter (case-insensitive & escaped)
     if (city && city !== 'All') {
-      query.city = { $regex: new RegExp(`^${city}$`, 'i') };
+      query.city = { $regex: new RegExp(`^${escapeRegex(city)}$`, 'i') };
     }
 
-    // 5. Keyword search (matches title or description)
+    // 5. Keyword search (matches title or description, escaped against ReDoS and regex injection)
     if (search.trim()) {
+      const safeSearch = escapeRegex(search.trim());
       query.$or = [
-        { title: { $regex: search.trim(), $options: 'i' } },
-        { description: { $regex: search.trim(), $options: 'i' } },
+        { title: { $regex: safeSearch, $options: 'i' } },
+        { description: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 

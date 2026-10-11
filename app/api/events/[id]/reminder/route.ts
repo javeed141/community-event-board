@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import connectDb from '@/lib/db';
 import Reminder from '@/lib/models/Reminder';
 import { getAuthUser } from '@/lib/auth';
 
@@ -13,6 +14,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Please log in to set reminders' }, { status: 401 });
     }
 
+    await connectDb();
     const { id: eventId } = await params;
 
     // Save reminder if not already saved
@@ -42,6 +44,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Please log in to manage reminders' }, { status: 401 });
     }
 
+    await connectDb();
     const { id: eventId } = await params;
 
     await Reminder.findOneAndDelete({
