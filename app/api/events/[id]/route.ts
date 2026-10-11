@@ -18,6 +18,6 @@ export async function GET(
     return NextResponse.json({ event });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Invalid event ID';
-    return NextResponse.json({ error: message }, { status: 404 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
