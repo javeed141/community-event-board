@@ -1,7 +1,6 @@
 'use client';
 
 import React, { Suspense, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -20,7 +19,6 @@ import {
   X,
   Sparkles,
   Inbox,
-  AlertCircle,
 } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 

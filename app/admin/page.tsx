@@ -3,11 +3,17 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   ShieldCheck,
   PlusCircle,
@@ -52,14 +58,10 @@ function AdminContent() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [now, setNow] = useState<number | null>(null);
 
-  useEffect(() => {
-    setNow(Date.now());
-  }, []);
-
   // 3. Filters & UI State
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -110,7 +112,10 @@ function AdminContent() {
         const res = await fetch('/api/admin/events');
         if (res.ok) {
           const data = await res.json();
-          if (!cancelled) setEvents(data.events || []);
+          if (!cancelled) {
+            setEvents(data.events || []);
+            setNow(Date.now());
+          }
         } else {
           toast.add({
             title: 'Error',
@@ -235,7 +240,7 @@ function AdminContent() {
 
       // Reset form and add new event to list
       setFormData(initialFormState);
-      setShowCreateForm(false);
+      setIsCreateModalOpen(false);
       setEvents((prev) => [data.event, ...prev]);
     } catch {
       setFormError('Network error while creating event. Please try again.');
@@ -275,220 +280,221 @@ function AdminContent() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
       {/* 1. ADMIN HEADER */}
       <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-bold text-base text-white leading-tight">Admin Portal</h1>
-                <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium">
                   {adminEmail}
                 </Badge>
               </div>
-              <p className="text-xs text-zinc-400">Manage community events and active status</p>
+              <p className="text-xs text-zinc-400 truncate">Manage community events and active status</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
             <Link href="/user">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs">
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Visitor Site</span>
+                <span>Visitor Site</span>
               </Button>
             </Link>
             <Button
               size="sm"
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white"
+              onClick={() => {
+                setFormError(null);
+                setIsCreateModalOpen(true);
+              }}
+              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>{showCreateForm ? 'Close Form' : 'Create Event'}</span>
+              <span>Create Event</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="gap-1.5 text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10"
+              className="gap-1.5 text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10 cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Logout</span>
+              <span>Logout</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 w-full flex-1 space-y-8">
-        {/* 2. CREATE EVENT SECTION (TOGGLEABLE) */}
-        {showCreateForm && (
-          <Card className="border-emerald-500/30 bg-zinc-900/90 shadow-2xl animate-in fade-in duration-200">
-            <CardHeader className="border-b border-zinc-800/80 pb-4">
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-emerald-400">
-                <PlusCircle className="w-5 h-5" />
-                <span>Create a New Community Event</span>
-              </CardTitle>
-              <CardDescription>
-                Fill in the details below. Required fields include Title, Category, City, Date & Time, Price, Image URL, and Description.
-              </CardDescription>
-            </CardHeader>
+      {/* 2. CREATE EVENT MODAL (SHADCN DIALOG) */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-zinc-900 border border-zinc-800 text-zinc-100 p-6 shadow-2xl">
+          <DialogHeader className="pb-2 border-b border-zinc-800/80">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-emerald-400">
+              <PlusCircle className="w-5 h-5" />
+              <span>Create a New Community Event</span>
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 text-xs">
+              Fill in the details below. Required fields include Title, Category, City, Date & Time, Price, Image URL, and Description.
+            </DialogDescription>
+          </DialogHeader>
 
-            <CardContent className="pt-6">
-              {formError && (
-                <div className="mb-5 p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-center gap-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
+          {formError && (
+            <div className="my-2 p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
 
-              <form onSubmit={handleCreateEvent} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Title */}
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    Event Title *
-                  </label>
-                  <Input
-                    placeholder="e.g. Coimbatore Traditional Food Carnival"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                  />
-                </div>
+          <form onSubmit={handleCreateEvent} className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {/* Title */}
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                Event Title *
+              </label>
+              <Input
+                placeholder="e.g. Coimbatore Traditional Food Carnival"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
 
-                {/* Category Dropdown */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    Category *
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full h-10 px-3 rounded-lg border border-zinc-700 bg-zinc-900 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {/* Category Dropdown */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                Category *
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full h-10 px-3 rounded-lg border border-zinc-700 bg-zinc-950 text-sm text-zinc-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                {/* City */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    City *
-                  </label>
-                  <Input
-                    placeholder="e.g. Coimbatore"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    required
-                  />
-                </div>
+            {/* City */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                City *
+              </label>
+              <Input
+                placeholder="e.g. Coimbatore"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                required
+              />
+            </div>
 
-                {/* Date & Time Picker */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    Date & Time *
-                  </label>
-                  <Input
-                    type="datetime-local"
-                    value={formData.dateTime}
-                    onChange={(e) => setFormData({ ...formData, dateTime: e.target.value })}
-                    required
-                  />
-                </div>
+            {/* Date & Time Picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                Date & Time *
+              </label>
+              <Input
+                type="datetime-local"
+                value={formData.dateTime}
+                onChange={(e) => setFormData({ ...formData, dateTime: e.target.value })}
+                required
+              />
+            </div>
 
-                {/* Price */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    Price (₹ INR) *
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="0 for Free event"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    required
-                  />
-                </div>
+            {/* Price */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                Price (₹ INR) *
+              </label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="0 for Free event"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                required
+              />
+            </div>
 
-                {/* Image URL */}
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    Banner Image URL *
-                  </label>
-                  <Input
-                    placeholder="https://images.unsplash.com/..."
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    required
-                  />
-                </div>
+            {/* Image URL */}
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                Banner Image URL *
+              </label>
+              <Input
+                placeholder="https://images.unsplash.com/..."
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                required
+              />
+            </div>
 
-                {/* Description */}
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    Event Description *
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Provide details about the event, what visitors can expect, venue instructions, etc."
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-900/60 p-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                    required
-                  />
-                </div>
+            {/* Description */}
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                Event Description *
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Provide details about the event, what visitors can expect, venue instructions, etc."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                required
+              />
+            </div>
 
-                {/* Active Status Switch */}
-                <div className="md:col-span-2 flex items-center gap-3 pt-2">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded text-emerald-500 bg-zinc-900 border-zinc-700 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <label htmlFor="isActive" className="text-sm text-zinc-300 cursor-pointer select-none">
-                    Publish as <strong>Active</strong> immediately (uncheck to save as Inactive draft)
-                  </label>
-                </div>
+            {/* Active Status Switch */}
+            <div className="md:col-span-2 flex items-center gap-3 pt-2">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="w-4 h-4 rounded text-emerald-500 bg-zinc-900 border-zinc-700 focus:ring-emerald-500 cursor-pointer"
+              />
+              <label htmlFor="isActive" className="text-sm text-zinc-300 cursor-pointer select-none">
+                Publish as <strong>Active</strong> immediately (uncheck to save as Inactive draft)
+              </label>
+            </div>
 
-                {/* Submit Buttons */}
-                <div className="md:col-span-2 flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCreateForm(false)}
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={submitting}
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <PlusCircle className="w-4 h-4" />
-                        <span>Save Event</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+            {/* Submit Buttons */}
+            <div className="md:col-span-2 flex items-center justify-end gap-3 pt-4 border-t border-zinc-800">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateModalOpen(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Save Event</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 space-y-8">
         {/* 3. EVENT MANAGEMENT & STATUS TOGGLE TABLE */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -611,14 +617,17 @@ function AdminContent() {
                               size="sm"
                               disabled={isPending}
                               onClick={() => handleToggleStatus(ev._id, ev.isActive)}
-                              className={`h-8 text-xs cursor-pointer ${
+                              className={`h-8 w-28 text-xs cursor-pointer justify-center transition-all ${
                                 ev.isActive
                                   ? 'text-zinc-300 hover:text-rose-400 hover:border-rose-900'
                                   : 'text-emerald-400 border-emerald-900 hover:bg-emerald-950/40'
                               }`}
                             >
                               {isPending ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <div className="flex items-center justify-center w-full gap-1.5">
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                  <span>{ev.isActive ? 'Updating...' : 'Updating...'}</span>
+                                </div>
                               ) : ev.isActive ? (
                                 <>
                                   <EyeOff className="w-3.5 h-3.5 mr-1" /> Deactivate

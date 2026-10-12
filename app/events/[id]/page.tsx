@@ -20,7 +20,6 @@ import {
   CheckCircle,
   Sparkles,
   Palette,
-  LogIn,
 } from 'lucide-react';
 import { formatEventDate, formatEventPrice } from '@/components/EventCard';
 import { toast } from '@/components/ui/toast';

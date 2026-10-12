@@ -16,48 +16,12 @@ import {
   Compass,
 } from 'lucide-react';
 
+import Navbar from '@/components/Navbar';
+
 export default function MarketingLandingPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col selection:bg-emerald-500/30">
-      {/* 1. NAVIGATION HEADER */}
-      <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="font-bold text-lg text-white tracking-tight">Community Events</span>
-              <span className="hidden sm:inline-block ml-2 text-xs text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-950/40 border border-emerald-800/30">
-                Local Discoveries
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Direct Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link href="/events">
-              <Button variant="ghost" size="sm" className="gap-1.5 text-xs sm:text-sm text-zinc-300 hover:text-white">
-                <Compass className="w-4 h-4 text-emerald-400" />
-                <span>Events</span>
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="gap-1.5 text-xs sm:text-sm text-zinc-300 hover:text-white">
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm" className="gap-1.5 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/50">
-                <UserPlus className="w-4 h-4" />
-                <span>Get Started</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* 2. HERO SECTION */}
       <section className="relative overflow-hidden py-20 px-4 border-b border-zinc-800/50 bg-gradient-to-b from-zinc-900/40 via-zinc-950 to-zinc-950">
