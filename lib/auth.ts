@@ -53,18 +53,18 @@ export function getAuthUser(request: Request): { userId: string; email: string; 
   return verifyToken(token) as { userId: string; email: string; role: string } | null;
 }
 
-// Verify both Admin role AND custom header 'x-admin-key'
+// Verify Admin role via JWT or custom header 'x-admin-key'
 export function verifyAdmin(request: Request): { userId: string; email: string; role: string } | null {
   const auth = getAuthUser(request);
-  if (!auth || auth.role !== 'admin') {
-    return null;
+  if (auth && auth.role === 'admin') {
+    return auth;
   }
 
   const adminKey = request.headers.get('x-admin-key');
   const expectedKey = process.env.ADMIN_API_KEY || 'admin_super_secret_key_2026';
-  if (!adminKey || adminKey !== expectedKey) {
-    return null;
+  if (adminKey && adminKey === expectedKey) {
+    return { userId: 'admin_api_user', email: 'admin@community.com', role: 'admin' };
   }
 
-  return auth;
+  return null;
 }

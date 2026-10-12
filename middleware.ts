@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Helper to decode JWT payload
+function getJwtPayload(token: string) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = typeof Buffer !== 'undefined'
+      ? Buffer.from(base64, 'base64').toString('utf-8')
+      : atob(base64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Extract auth token from cookie or Authorization header
+  // 1. Get token from cookies or authorization header
   const token =
     request.cookies.get('auth_token')?.value ||
     request.headers.get('authorization')?.replace('Bearer ', '');
@@ -12,45 +26,43 @@ export function middleware(request: NextRequest) {
   // 2. Protect Server API Routes (/api/*)
   if (pathname.startsWith('/api/')) {
     if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Please log in' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Check admin secret key for /api/admin/*
-    if (pathname.startsWith('/api/admin')) {
-      const adminKey = request.headers.get('x-admin-key');
-      const expectedKey = process.env.ADMIN_API_KEY || 'admin_super_secret_key_2026';
-      if (!adminKey || adminKey !== expectedKey) {
-        return NextResponse.json(
-          { error: 'Forbidden: Valid x-admin-key required' },
-          { status: 403 }
-        );
-      }
-    }
-
     return NextResponse.next();
   }
 
   // 3. Protect Frontend UI Pages (/admin, /user)
-  // Any visitor without a token is immediately redirected to /login
-  if (!token && (pathname.startsWith('/admin') || pathname.startsWith('/user'))) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+  if (pathname.startsWith('/admin') || pathname.startsWith('/user')) {
+    // If not logged in, redirect to login
+    if (!token) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const payload = getJwtPayload(token);
+    const isAdmin = payload?.role === 'admin';
+
+    // If admin visits /user -> redirect to /admin
+    if (isAdmin && pathname.startsWith('/user')) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+
+    // If regular user visits /admin -> redirect to /user
+    if (!isAdmin && pathname.startsWith('/admin')) {
+      return NextResponse.redirect(new URL('/user', request.url));
+    }
   }
 
   return NextResponse.next();
 }
 
-// Specify exactly which routes the middleware guards
 export const config = {
   matcher: [
-    // Frontend Protected Pages
+    // Protected Frontend Pages
     '/admin/:path*',
     '/user/:path*',
-    // Protected API Routes
+    // Protected API Endpoints
     '/api/auth/me',
     '/api/favourites/:path*',
     '/api/feed/:path*',

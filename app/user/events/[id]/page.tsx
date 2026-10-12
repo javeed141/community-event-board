@@ -112,34 +112,43 @@ function EventDetailContent() {
     loadCardDesign();
   }, [id]);
 
-  // Toggle Reminder
+  // Toggle Reminder with Optimistic UI & Rollback on failure
   async function toggleReminder() {
     if (!id) return;
+    const previousState = hasReminder;
+    const nextState = !hasReminder;
+
+    // 1. Immediate optimistic UI update
+    setHasReminder(nextState);
     setReminderLoading(true);
+
     try {
-      const method = hasReminder ? 'DELETE' : 'PUT';
+      const method = previousState ? 'DELETE' : 'PUT';
       const res = await fetch(`/api/events/${id}/reminder`, { method });
 
       if (res.ok) {
-        setHasReminder(!hasReminder);
         toast.add({
-          title: hasReminder ? 'Reminder removed' : 'Reminder saved',
-          description: hasReminder
-            ? 'You will no longer receive notifications for this event.'
-            : 'You will be notified for this event.',
+          title: nextState ? 'Reminder saved' : 'Reminder removed',
+          description: nextState
+            ? 'You will be notified for this event.'
+            : 'You will no longer receive notifications for this event.',
           type: 'success',
         });
       } else {
+        // Revert on server error
+        setHasReminder(previousState);
         toast.add({
           title: 'Action failed',
-          description: 'Could not update reminder. Make sure you are signed in.',
+          description: 'Could not update reminder. State was rolled back.',
           type: 'error',
         });
       }
     } catch {
+      // Revert on network error
+      setHasReminder(previousState);
       toast.add({
         title: 'Network error',
-        description: 'Failed to communicate with server.',
+        description: 'Failed to communicate with server. Reminder rolled back.',
         type: 'error',
       });
     } finally {

@@ -22,29 +22,38 @@ export default function FavoritesPicker({
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Load from /api/favourites if initialCategories wasn't provided
-  useEffect(() => {
+  // Sync categories if initialCategories prop changes
+  const [prevInitial, setPrevInitial] = useState(initialCategories);
+  if (initialCategories !== prevInitial) {
+    setPrevInitial(initialCategories);
     if (initialCategories !== undefined) {
       setCategories(initialCategories);
-      return;
     }
+  }
 
+  // Load from /api/favourites if initialCategories wasn't provided
+  useEffect(() => {
+    if (initialCategories !== undefined) return;
+
+    let cancelled = false;
     async function loadFavorites() {
-      setLoading(true);
       try {
         const res = await fetch('/api/favourites');
         if (res.ok) {
           const data = await res.json();
-          setCategories(data.favoriteCategories || []);
+          if (!cancelled) setCategories(data.favoriteCategories || []);
         }
       } catch {
         // Silently catch
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadFavorites();
+    return () => {
+      cancelled = true;
+    };
   }, [initialCategories]);
 
   // Toggle selection

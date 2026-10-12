@@ -61,7 +61,7 @@ export default function UserDashboardPage() {
   }, [router]);
 
   // Fetch feed events
-  async function fetchFeed() {
+  const fetchFeed = async () => {
     setFeedLoading(true);
     try {
       const res = await fetch('/api/feed');
@@ -77,26 +77,46 @@ export default function UserDashboardPage() {
     } finally {
       setFeedLoading(false);
     }
-  }
+  };
 
   // Load feed and reminders once auth completes
   useEffect(() => {
     if (!currentUser) return;
+    let cancelled = false;
 
-    fetchFeed();
-
-    async function fetchReminders() {
+    async function loadData() {
+      setFeedLoading(true);
       try {
-        const res = await fetch('/api/reminders');
-        if (!res.ok) return;
-        const data = await res.json();
-        setReminderEventIds(data.reminderEventIds || []);
+        const [feedRes, remindersRes] = await Promise.all([
+          fetch('/api/feed'),
+          fetch('/api/reminders'),
+        ]);
+
+        if (feedRes.ok && !cancelled) {
+          const feedData = await feedRes.json();
+          setFeedEvents(feedData.events || []);
+          setFeedMessage(feedData.message || '');
+          if (feedData.favoriteCategories) {
+            setUserCategories(feedData.favoriteCategories);
+          }
+        }
+
+        if (remindersRes.ok && !cancelled) {
+          const remindersData = await remindersRes.json();
+          setReminderEventIds(remindersData.reminderEventIds || []);
+        }
       } catch {
         // Silently catch
+      } finally {
+        if (!cancelled) setFeedLoading(false);
       }
     }
 
-    fetchReminders();
+    loadData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentUser]);
 
   // Logout handler
@@ -109,9 +129,17 @@ export default function UserDashboardPage() {
     }
   }
 
-  // Toggle Reminder handler
+  // Toggle Reminder handler with Optimistic UI & Rollback on failure
   async function toggleReminder(eventId: string) {
     const hasReminder = reminderEventIds.includes(eventId);
+    const previousReminders = [...reminderEventIds];
+
+    // 1. Optimistic immediate update
+    if (hasReminder) {
+      setReminderEventIds((prev) => prev.filter((id) => id !== eventId));
+    } else {
+      setReminderEventIds((prev) => [...prev, eventId]);
+    }
 
     setReminderLoading((prev) => new Set(prev).add(eventId));
 
@@ -119,23 +147,29 @@ export default function UserDashboardPage() {
       const method = hasReminder ? 'DELETE' : 'PUT';
       const res = await fetch(`/api/events/${eventId}/reminder`, { method });
 
-      if (res.ok) {
-        if (hasReminder) {
-          setReminderEventIds((prev) => prev.filter((id) => id !== eventId));
-        } else {
-          setReminderEventIds((prev) => [...prev, eventId]);
-        }
-      } else {
+      if (!res.ok) {
+        // Rollback on failure
+        setReminderEventIds(previousReminders);
         toast.add({
           title: 'Reminder failed',
-          description: 'Could not update reminder. Please try again.',
+          description: 'Could not update reminder. Action was rolled back.',
           type: 'error',
+        });
+      } else {
+        toast.add({
+          title: hasReminder ? 'Reminder removed' : 'Reminder saved',
+          description: hasReminder
+            ? 'Event removed from your reminders.'
+            : 'Event saved! You will receive a reminder.',
+          type: 'success',
         });
       }
     } catch {
+      // Rollback on network error
+      setReminderEventIds(previousReminders);
       toast.add({
         title: 'Network error',
-        description: 'Could not reach the server. Please try again.',
+        description: 'Could not reach the server. Reminder change was rolled back.',
         type: 'error',
       });
     } finally {

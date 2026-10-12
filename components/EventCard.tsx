@@ -120,8 +120,8 @@ export default function EventCard({
         <div className="text-sm font-bold text-white">
           {formatEventPrice(event.price)}
         </div>
-        <Link href={`/user/events/${event._id}`}>
-          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+        <Link href={`/events/${event._id}`}>
+          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 cursor-pointer">
             <Palette className="w-3.5 h-3.5" />
             View Details
           </Button>

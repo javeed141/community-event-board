@@ -2,21 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Calendar,
   Sparkles,
   Heart,
   Palette,
-  Bell,
   ShieldCheck,
   ArrowRight,
   LogIn,
   UserPlus,
   Compass,
-  CheckCircle2,
-  Users,
 } from 'lucide-react';
 
 export default function MarketingLandingPage() {
@@ -39,15 +36,21 @@ export default function MarketingLandingPage() {
           </div>
 
           {/* Quick Direct Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link href="/events">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs sm:text-sm text-zinc-300 hover:text-white">
+                <Compass className="w-4 h-4 text-emerald-400" />
+                <span>Events</span>
+              </Button>
+            </Link>
             <Link href="/login">
-              <Button variant="ghost" size="sm" className="gap-1.5 text-zinc-300 hover:text-white">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs sm:text-sm text-zinc-300 hover:text-white">
                 <LogIn className="w-4 h-4" />
                 <span>Sign In</span>
               </Button>
             </Link>
             <Link href="/signup">
-              <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/50">
+              <Button size="sm" className="gap-1.5 text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/50">
                 <UserPlus className="w-4 h-4" />
                 <span>Get Started</span>
               </Button>
@@ -77,16 +80,16 @@ export default function MarketingLandingPage() {
 
           {/* Primary Call-to-Actions */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-            <Link href="/signup" className="w-full sm:w-auto">
+            <Link href="/events" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-500 text-base shadow-xl shadow-emerald-950/50 h-12 px-6">
-                <span>Join Community Free</span>
-                <ArrowRight className="w-4 h-4" />
+                <Compass className="w-4 h-4" />
+                <span>Explore All Events</span>
               </Button>
             </Link>
-            <Link href="/login" className="w-full sm:w-auto">
+            <Link href="/signup" className="w-full sm:w-auto">
               <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2 border-zinc-700 hover:bg-zinc-800 text-base h-12 px-6">
-                <LogIn className="w-4 h-4" />
-                <span>Sign In to Your Account</span>
+                <span>Join Community Free</span>
+                <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>
@@ -94,6 +97,11 @@ export default function MarketingLandingPage() {
           {/* Quick Direct Links for Easy Review Navigation */}
           <div className="pt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-500">
             <span>Quick review access:</span>
+            <Link href="/events" className="text-zinc-400 hover:text-emerald-400 flex items-center gap-1 underline underline-offset-4">
+              <Compass className="w-3 h-3 text-emerald-400" />
+              Public Events (/events)
+            </Link>
+            <span className="text-zinc-700">&bull;</span>
             <Link href="/user" className="text-zinc-400 hover:text-emerald-400 flex items-center gap-1 underline underline-offset-4">
               <Heart className="w-3 h-3 text-rose-400" />
               User Dashboard (/user)

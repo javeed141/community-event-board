@@ -1,6 +1,5 @@
-import React from 'react';
+import { redirect } from 'next/navigation';
 
 export default function FeedPage() {
-  return <div>Feed</div>;
+  redirect('/user');
 }
-
