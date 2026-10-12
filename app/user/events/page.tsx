@@ -1,11 +1,14 @@
 'use client';
 
-import React, { Suspense, useEffect, useState, useCallback } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Calendar,
@@ -34,92 +37,60 @@ const CATEGORIES = ['All', 'Music', 'Workshop', 'Food', 'Sports', 'Kids'];
 const CITIES = ['All', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Coimbatore'];
 
 function EventsContent() {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Read current filters directly from URL
-  const searchParam = searchParams.get('search') || '';
-  const categoryParam = searchParams.get('category') || 'All';
-  const cityParam = searchParams.get('city') || 'All';
-  const pageParam = parseInt(searchParams.get('page') || '1', 10) || 1;
-
-  // Local state for search text input so typing remains smooth and responsive
-  const [searchInput, setSearchInput] = useState(searchParam);
+  // Filters (read initial values from URL if present)
+  const initialSearch = searchParams.get('search') || '';
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+  const [category, setCategory] = useState(searchParams.get('category') || 'All');
+  const [city, setCity] = useState(searchParams.get('city') || 'All');
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
 
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(1);
   const [totalEvents, setTotalEvents] = useState(0);
 
-  // Sync local search input if URL changes (e.g. browser back/forward or Reset)
-  useEffect(() => {
-    setSearchInput(searchParam);
-  }, [searchParam]);
-
-  // Helper to update URL search parameters
-  const updateQueryParams = useCallback(
-    (updates: { search?: string; category?: string; city?: string; page?: number }) => {
-      const current = new URLSearchParams(searchParams.toString());
-
-      const nextSearch = updates.search !== undefined ? updates.search : (current.get('search') || '');
-      if (nextSearch.trim()) {
-        current.set('search', nextSearch.trim());
-      } else {
-        current.delete('search');
-      }
-
-      const nextCategory = updates.category !== undefined ? updates.category : (current.get('category') || 'All');
-      if (nextCategory && nextCategory !== 'All') {
-        current.set('category', nextCategory);
-      } else {
-        current.delete('category');
-      }
-
-      const nextCity = updates.city !== undefined ? updates.city : (current.get('city') || 'All');
-      if (nextCity && nextCity !== 'All') {
-        current.set('city', nextCity);
-      } else {
-        current.delete('city');
-      }
-
-      const nextPage = updates.page !== undefined ? updates.page : 1;
-      if (nextPage > 1) {
-        current.set('page', nextPage.toString());
-      } else {
-        current.delete('page');
-      }
-
-      const queryString = current.toString();
-      router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
-    },
-    [searchParams, pathname, router]
-  );
-
-  // Debounce search input changes into the URL
+  // Debounce search input: wait 400ms after user pauses typing before fetching
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput.trim() !== searchParam.trim()) {
-        updateQueryParams({ search: searchInput, page: 1 });
-      }
+      setDebouncedSearch(search);
+      setPage(1);
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchInput, searchParam, updateQueryParams]);
+  }, [search]);
 
-  // Fetch events whenever URL query parameters change
+  // Fetch events whenever debouncedSearch, category, city, or page changes
   useEffect(() => {
     async function loadEvents() {
       setLoading(true);
       try {
+        // 1. Build API parameters
         const params = new URLSearchParams({
-          page: pageParam.toString(),
+          page: page.toString(),
           limit: '6',
         });
-        if (searchParam.trim()) params.append('search', searchParam.trim());
-        if (categoryParam !== 'All') params.append('category', categoryParam);
-        if (cityParam !== 'All') params.append('city', cityParam);
+        if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
+        if (category !== 'All') params.append('category', category);
+        if (city !== 'All') params.append('city', city);
 
+        // 2. Keep the browser address bar URL in sync with active filters
+        const urlParams = new URLSearchParams();
+        if (debouncedSearch.trim()) urlParams.set('search', debouncedSearch.trim());
+        if (category !== 'All') urlParams.set('category', category);
+        if (city !== 'All') urlParams.set('city', city);
+        if (page > 1) urlParams.set('page', page.toString());
+
+        const queryString = urlParams.toString();
+        window.history.replaceState(
+          null,
+          '',
+          queryString ? `?${queryString}` : window.location.pathname
+        );
+
+        // 3. Fetch data from backend
         const res = await fetch(`/api/events?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
@@ -128,21 +99,24 @@ function EventsContent() {
           setTotalEvents(data.pagination?.total || 0);
         }
       } catch {
-        // Silently catch
+        // Silently catch errors
       } finally {
         setLoading(false);
       }
     }
 
     loadEvents();
-  }, [searchParam, categoryParam, cityParam, pageParam]);
+  }, [debouncedSearch, category, city, page]);
 
   const clearFilters = () => {
-    setSearchInput('');
-    router.replace(pathname, { scroll: false });
+    setSearch('');
+    setDebouncedSearch('');
+    setCategory('All');
+    setCity('All');
+    setPage(1);
   };
 
-  const hasActiveFilters = Boolean(searchParam || categoryParam !== 'All' || cityParam !== 'All');
+  const hasActiveFilters = Boolean(search || category !== 'All' || city !== 'All');
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
@@ -159,9 +133,11 @@ function EventsContent() {
             <h1 className="font-bold text-base text-white">Upcoming Community Events</h1>
           </div>
 
-          <span className="text-xs text-zinc-400">
-            {totalEvents} {totalEvents === 1 ? 'event' : 'events'} found
-          </span>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 font-normal">
+              {totalEvents} {totalEvents === 1 ? 'event' : 'events'}
+            </Badge>
+          </div>
         </div>
       </header>
 
@@ -175,8 +151,8 @@ function EventsContent() {
               <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 placeholder="Search events by title or description..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 bg-zinc-950/60 border-zinc-800 h-10 text-sm"
               />
             </div>
@@ -185,8 +161,11 @@ function EventsContent() {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <span className="text-xs text-zinc-400 whitespace-nowrap">City:</span>
               <select
-                value={cityParam}
-                onChange={(e) => updateQueryParams({ city: e.target.value, page: 1 })}
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                  setPage(1);
+                }}
                 className="bg-zinc-950/60 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-200 outline-none w-full md:w-auto"
               >
                 {CITIES.map((c) => (
@@ -211,24 +190,34 @@ function EventsContent() {
             )}
           </div>
 
-          {/* Category Chips */}
-          <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-zinc-800/60">
+          <Separator className="bg-zinc-800/80" />
+
+          {/* Category Chips with Shadcn Badge */}
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-zinc-400 flex items-center gap-1 mr-1">
               <Filter className="w-3 h-3" /> Category:
             </span>
             {CATEGORIES.map((cat) => {
-              const active = categoryParam === cat;
+              const active = category === cat;
               return (
                 <button
                   key={cat}
-                  onClick={() => updateQueryParams({ category: cat, page: 1 })}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                    active
-                      ? 'bg-rose-500 text-white shadow-sm'
-                      : 'bg-zinc-800/60 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-                  }`}
+                  onClick={() => {
+                    setCategory(cat);
+                    setPage(1);
+                  }}
+                  className="cursor-pointer"
                 >
-                  {cat}
+                  <Badge
+                    variant={active ? 'default' : 'outline'}
+                    className={`px-3 py-1 text-xs transition-colors ${
+                      active
+                        ? 'bg-rose-500 hover:bg-rose-600 text-white border-transparent'
+                        : 'border-zinc-700/80 text-zinc-400 hover:text-white hover:border-zinc-600 bg-zinc-900/40'
+                    }`}
+                  >
+                    {cat}
+                  </Badge>
                 </button>
               );
             })}
@@ -239,17 +228,23 @@ function EventsContent() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div
-                key={n}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden animate-pulse"
-              >
-                <div className="h-44 bg-zinc-800" />
+              <Card key={n} className="overflow-hidden border-zinc-800 bg-zinc-900/60 flex flex-col p-0">
+                <Skeleton className="h-44 w-full bg-zinc-800/60 rounded-none" />
                 <div className="p-4 space-y-3">
-                  <div className="h-3 bg-zinc-800 rounded w-1/2" />
-                  <div className="h-4 bg-zinc-800 rounded w-3/4" />
-                  <div className="h-3 bg-zinc-800 rounded w-full" />
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-28 bg-zinc-800/60" />
+                    <Skeleton className="h-4 w-20 bg-zinc-800/60" />
+                  </div>
+                  <Skeleton className="h-5 w-3/4 bg-zinc-800/60" />
+                  <Skeleton className="h-3 w-full bg-zinc-800/60" />
+                  <Skeleton className="h-3 w-2/3 bg-zinc-800/60" />
+                  <Separator className="bg-zinc-800/60 my-2" />
+                  <div className="flex justify-between items-center pt-1">
+                    <Skeleton className="h-4 w-14 bg-zinc-800/60" />
+                    <Skeleton className="h-8 w-24 bg-zinc-800/60 rounded-md" />
+                  </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         ) : events.length === 0 ? (
@@ -332,20 +327,20 @@ function EventsContent() {
             <Button
               variant="outline"
               size="sm"
-              disabled={pageParam <= 1}
-              onClick={() => updateQueryParams({ page: Math.max(1, pageParam - 1) })}
+              disabled={page <= 1}
+              onClick={() => setPage(Math.max(1, page - 1))}
               className="gap-1 text-xs"
             >
               <ChevronLeft className="w-4 h-4" /> Previous
             </Button>
             <span className="text-xs text-zinc-400">
-              Page {pageParam} of {totalPages}
+              Page {page} of {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
-              disabled={pageParam >= totalPages}
-              onClick={() => updateQueryParams({ page: Math.min(totalPages, pageParam + 1) })}
+              disabled={page >= totalPages}
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
               className="gap-1 text-xs"
             >
               Next <ChevronRight className="w-4 h-4" />
@@ -370,4 +365,3 @@ export default function UserEventsPage() {
     </Suspense>
   );
 }
-

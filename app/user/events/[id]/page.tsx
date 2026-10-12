@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Calendar,
   MapPin,
   ArrowLeft,
   Tag,
-  Clock,
   Bell,
   Loader2,
   CheckCircle,
@@ -31,7 +32,7 @@ type EventDetail = {
   isActive: boolean;
 };
 
-export default function SingleEventDetailPage() {
+function EventDetailContent() {
   const params = useParams();
   const id = params?.id as string;
 
@@ -42,6 +43,19 @@ export default function SingleEventDetailPage() {
   // Reminder status
   const [hasReminder, setHasReminder] = useState(false);
   const [reminderLoading, setReminderLoading] = useState(false);
+
+  // Card Designer state
+  const THEMES = [
+    { id: 'default', label: 'Dark',     bg: 'bg-zinc-900',                     preview: 'bg-zinc-800' },
+    { id: 'gradient', label: 'Sunset',   bg: 'bg-gradient-to-br from-rose-900 to-orange-800', preview: 'bg-gradient-to-br from-rose-500 to-orange-400' },
+    { id: 'neon',     label: 'Neon',     bg: 'bg-gradient-to-br from-violet-900 to-cyan-900',  preview: 'bg-gradient-to-br from-violet-500 to-cyan-400' },
+  ];
+  const STICKER_OPTIONS = ['⭐', '🎉', '🎵', '🍕', '🚀'];
+
+  const [selectedTheme, setSelectedTheme] = useState('default');
+  const [stickers, setStickers] = useState<string[]>([]);
+  const [designSaving, setDesignSaving] = useState(false);
+  const [designSaved, setDesignSaved] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -77,8 +91,25 @@ export default function SingleEventDetailPage() {
       }
     }
 
+    // Load saved card design
+    async function loadCardDesign() {
+      try {
+        const res = await fetch(`/api/events/${id}/card-design`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.design) {
+            setSelectedTheme(data.design.theme || 'default');
+            setStickers(data.design.stickers || []);
+          }
+        }
+      } catch {
+        // No saved design, defaults remain
+      }
+    }
+
     loadEvent();
     checkReminder();
+    loadCardDesign();
   }, [id]);
 
   // Toggle Reminder
@@ -113,6 +144,40 @@ export default function SingleEventDetailPage() {
       });
     } finally {
       setReminderLoading(false);
+    }
+  }
+
+  // Card Designer helpers
+  function addSticker(emoji: string) {
+    if (stickers.length >= 3) return; // max 3 stickers per spec
+    setStickers((prev) => [...prev, emoji]);
+    setDesignSaved(false);
+  }
+
+  function removeSticker(index: number) {
+    setStickers((prev) => prev.filter((_, i) => i !== index));
+    setDesignSaved(false);
+  }
+
+  async function saveDesign() {
+    if (!id) return;
+    setDesignSaving(true);
+    try {
+      const res = await fetch(`/api/events/${id}/card-design`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: selectedTheme, stickers }),
+      });
+      if (res.ok) {
+        setDesignSaved(true);
+        toast.add({ title: 'Design saved!', description: 'Your card design has been saved.', type: 'success' });
+      } else {
+        toast.add({ title: 'Save failed', description: 'Please log in to save your design.', type: 'error' });
+      }
+    } catch {
+      toast.add({ title: 'Network error', description: 'Failed to save design.', type: 'error' });
+    } finally {
+      setDesignSaving(false);
     }
   }
 
@@ -198,12 +263,12 @@ export default function SingleEventDetailPage() {
 
             {/* Badges on Hero */}
             <div className="absolute top-4 left-4 flex items-center gap-2">
-              <span className="bg-rose-500/90 text-white text-xs font-semibold px-3 py-1 rounded-full backdrop-blur">
+              <Badge className="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-3 py-1 text-xs">
                 {event.category}
-              </span>
-              <span className="bg-zinc-900/90 text-zinc-300 border border-zinc-700/60 text-xs px-2.5 py-1 rounded-full backdrop-blur">
+              </Badge>
+              <Badge variant="outline" className="bg-zinc-900/90 text-zinc-300 border-zinc-700/60 text-xs px-2.5 py-1 backdrop-blur">
                 {event.city}
-              </span>
+              </Badge>
             </div>
 
             {/* Bottom Title Bar on Hero */}
@@ -255,6 +320,8 @@ export default function SingleEventDetailPage() {
               </div>
             </div>
 
+            <Separator className="bg-zinc-800" />
+
             {/* Description */}
             <div className="space-y-3">
               <h2 className="text-lg font-bold text-white">About This Event</h2>
@@ -264,7 +331,142 @@ export default function SingleEventDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* ── CARD DESIGNER ────────────────────────────────────────────────── */}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-6">
+          <h2 className="text-lg font-bold text-white">🎨 Design Your Card</h2>
+
+          {/* Live Card Preview */}
+          <div
+            className={`relative rounded-xl overflow-hidden p-5 transition-all duration-500 ${
+              THEMES.find((t) => t.id === selectedTheme)?.bg ?? 'bg-zinc-900'
+            }`}
+          >
+            <div className="text-xs font-semibold text-white/60 uppercase tracking-widest mb-2">
+              {event?.category}
+            </div>
+            <div className="text-xl font-extrabold text-white leading-snug mb-1">
+              {event?.title}
+            </div>
+            <div className="text-sm text-white/70">{formatEventDate(event?.dateTime ?? '')}</div>
+            <div className="text-sm text-white/70">{event?.city}</div>
+
+            {/* Stickers on the card */}
+            {stickers.length > 0 && (
+              <div className="flex gap-2 mt-3 flex-wrap">
+                {stickers.map((s, i) => (
+                  <span
+                    key={i}
+                    className="text-2xl transition-all duration-300 animate-bounce"
+                    style={{ animationDelay: `${i * 100}ms`, animationDuration: '1s', animationIterationCount: 1 }}
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Theme Picker */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Background Theme</p>
+            <div className="flex gap-3">
+              {THEMES.map((theme) => (
+                <button
+                  key={theme.id}
+                  onClick={() => { setSelectedTheme(theme.id); setDesignSaved(false); }}
+                  className={`flex flex-col items-center gap-1.5 group`}
+                >
+                  <div
+                    className={`w-12 h-12 rounded-lg ${theme.preview} border-2 transition-all ${
+                      selectedTheme === theme.id
+                        ? 'border-rose-500 scale-110'
+                        : 'border-zinc-700 hover:border-zinc-500'
+                    }`}
+                  />
+                  <span className={`text-xs ${selectedTheme === theme.id ? 'text-rose-400 font-semibold' : 'text-zinc-500'}`}>
+                    {theme.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sticker Picker */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+              Add Stickers{' '}
+              <span className="text-zinc-600 normal-case font-normal">(max 3)</span>
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {STICKER_OPTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => addSticker(emoji)}
+                  disabled={stickers.length >= 3}
+                  className="text-2xl p-2 rounded-lg border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  title={stickers.length >= 3 ? 'Remove a sticker first' : `Add ${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Active Stickers (removable) */}
+          {stickers.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Your Stickers</p>
+              <div className="flex gap-2 flex-wrap">
+                {stickers.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => removeSticker(i)}
+                    className="flex items-center gap-1 text-xl px-3 py-1.5 rounded-lg bg-zinc-800 border border-zinc-700 hover:border-red-500 hover:bg-red-500/10 transition-all group"
+                    title="Click to remove"
+                  >
+                    {s}
+                    <span className="text-xs text-zinc-600 group-hover:text-red-400 transition-colors">✕</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Save Button */}
+          <Button
+            onClick={saveDesign}
+            disabled={designSaving}
+            className={`w-full gap-2 transition-colors ${
+              designSaved
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                : 'bg-rose-600 hover:bg-rose-500 text-white'
+            }`}
+          >
+            {designSaving ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
+            ) : designSaved ? (
+              <><CheckCircle className="w-4 h-4" /> Design Saved</>
+            ) : (
+              'Save Design'
+            )}
+          </Button>
+        </div>
       </main>
     </div>
+  );
+}
+
+export default function SingleEventDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+          <Spinner />
+        </div>
+      }
+    >
+      <EventDetailContent />
+    </Suspense>
   );
 }

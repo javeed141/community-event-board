@@ -4,6 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Heart, ArrowLeft, LogOut, User, Tag, Inbox } from 'lucide-react';
 import EventCard, { EventItem } from '@/components/EventCard';
@@ -212,9 +215,9 @@ export default function UserDashboardPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-white">Your Feed</h2>
-              <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs font-medium">
                 Upcoming & Active
-              </span>
+              </Badge>
             </div>
             <span className="text-xs text-zinc-400">Nearest date first</span>
           </div>
@@ -223,18 +226,18 @@ export default function UserDashboardPage() {
           {feedLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((n) => (
-                <div
-                  key={n}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden animate-pulse"
-                >
-                  <div className="h-44 bg-zinc-800" />
+                <Card key={n} className="overflow-hidden border-zinc-800 bg-zinc-900/60 flex flex-col p-0">
+                  <Skeleton className="h-44 w-full bg-zinc-800/60 rounded-none" />
                   <div className="p-4 space-y-3">
-                    <div className="h-3 bg-zinc-800 rounded w-1/2" />
-                    <div className="h-4 bg-zinc-800 rounded w-3/4" />
-                    <div className="h-3 bg-zinc-800 rounded w-full" />
-                    <div className="h-3 bg-zinc-800 rounded w-2/3" />
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-28 bg-zinc-800/60" />
+                      <Skeleton className="h-4 w-20 bg-zinc-800/60" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4 bg-zinc-800/60" />
+                    <Skeleton className="h-3 w-full bg-zinc-800/60" />
+                    <Skeleton className="h-3 w-2/3 bg-zinc-800/60" />
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}

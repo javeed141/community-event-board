@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, Bell, Palette, Loader2 } from 'lucide-react';
 
 export type EventItem = {
@@ -67,8 +68,10 @@ export default function EventCard({
         )}
 
         {/* Category badge */}
-        <div className="absolute top-3 left-3 bg-zinc-950/80 backdrop-blur px-2.5 py-1 rounded text-xs font-medium text-rose-400 border border-zinc-800">
-          {event.category}
+        <div className="absolute top-3 left-3">
+          <Badge variant="secondary" className="bg-zinc-950/80 backdrop-blur border-zinc-800 text-rose-400 font-medium">
+            {event.category}
+          </Badge>
         </div>
 
         {/* Bell / Remind Me button */}
