@@ -121,20 +121,21 @@ function EventsContent() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
-      <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="border-b border-zinc-800/80 bg-zinc-900/80 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link href="/user">
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8 sm:h-9 px-2.5 sm:px-3 shrink-0">
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Dashboard</span>
+                <span className="hidden sm:inline">Back to Dashboard</span>
+                <span className="sm:hidden">Dashboard</span>
               </Button>
             </Link>
-            <h1 className="font-bold text-base text-white">Upcoming Community Events</h1>
+            <h1 className="font-bold text-sm sm:text-base text-white truncate">Upcoming Events</h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 font-normal">
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 font-normal text-xs py-0.5 px-2">
               {totalEvents} {totalEvents === 1 ? 'event' : 'events'}
             </Badge>
           </div>

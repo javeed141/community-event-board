@@ -220,12 +220,13 @@ function EventDetailContent() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
-      <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="border-b border-zinc-800/80 bg-zinc-900/80 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
           <Link href="/user/events">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8 sm:h-9 px-2.5 sm:px-3">
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to All Events</span>
+              <span className="hidden sm:inline">Back to All Events</span>
+              <span className="sm:hidden">All Events</span>
             </Button>
           </Link>
 

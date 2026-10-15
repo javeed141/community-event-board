@@ -194,26 +194,26 @@ export default function UserDashboardPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
-      <header className="border-b border-zinc-800/80 bg-zinc-900/60 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-              <Heart className="w-5 h-5" />
+      <header className="border-b border-zinc-800/80 bg-zinc-900/80 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+              <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h1 className="font-bold text-base text-white leading-tight">My Dashboard</h1>
-              <p className="text-xs text-zinc-400">Personalized community events</p>
+            <div className="min-w-0">
+              <h1 className="font-bold text-sm sm:text-base text-white leading-tight truncate">My Dashboard</h1>
+              <p className="hidden sm:block text-xs text-zinc-400 truncate">Personalized community events</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="hidden sm:flex items-center gap-2 bg-zinc-800/60 border border-zinc-700/60 rounded-lg px-3 py-1.5">
               <User className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-xs text-zinc-300 font-medium">{currentUser.email}</span>
+              <span className="text-xs text-zinc-300 font-medium truncate max-w-[150px]">{currentUser.email}</span>
             </div>
 
             <Link href="/user/events">
-              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8 sm:h-9 px-2.5 sm:px-3">
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">All Events</span>
               </Button>
@@ -224,7 +224,7 @@ export default function UserDashboardPage() {
               size="sm"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="gap-1.5 text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10"
+              className="gap-1.5 text-xs text-rose-400 border-rose-500/30 hover:bg-rose-500/10 h-8 sm:h-9 px-2.5 sm:px-3 cursor-pointer"
             >
               {loggingOut ? <Spinner /> : <LogOut className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">Logout</span>
