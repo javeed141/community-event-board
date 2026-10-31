@@ -16,7 +16,7 @@ Built with **Next.js (App Router)**, **MongoDB**, **Tailwind CSS**, and **Shadcn
 ```bash
 cd community-events-board
 npm install
-```
+``` 
 
 ### Step 2: Configure Environment Variables
 Create a `.env` file in the `community-events-board` root directory (or use the provided defaults):
