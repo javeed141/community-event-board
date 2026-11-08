@@ -5,4 +5,4 @@ const jsonText = Buffer.from(token, 'base64url').toString('utf-8');
 const data = JSON.parse(jsonText);
 
 console.log(data);
-console.log(data.role);
+console.log(data.role); 
